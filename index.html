@@ -1,0 +1,1624 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teachvatory Studio · Assessment Review Console</title>
+<style>
+  /* ============================================================
+     THEME TOKENS
+     Radius scale (locked): containers 14 · buttons/inputs 10 · badges 6 · pills 999
+     Accent (locked): ink-navy. Tiers are an ordinal categorical set, tuned to one weight.
+     ============================================================ */
+  :root {
+    --bg: #f5f4f1;
+    --surface: #ffffff;
+    --surface-sunken: #faf9f6;
+    --surface-hover: #f4f3ef;
+    --border: #e7e5de;
+    --border-strong: #d9d6cc;
+
+    --ink: #1c1b18;
+    --ink-2: #4a4842;
+    --muted: #75736b;
+    --faint: #a4a299;
+
+    --accent: #2a4574;
+    --accent-press: #1f3559;
+    --accent-tint: #eaeff7;
+    --accent-tint-2: #dde6f3;
+    --accent-line: #c6d4e9;
+    --on-accent: #ffffff;
+
+    --tier-found-bg: #f3ead2; --tier-found-tx: #856223; --tier-found-dt: #c79a3e;
+    --tier-solid-bg: #d9e7e2; --tier-solid-tx: #2c6a5e; --tier-solid-dt: #4f9384;
+    --tier-adv-bg:   #e6dbf0; --tier-adv-tx:   #693e8a; --tier-adv-dt:   #9163b8;
+
+    --teacher-bg: #fbf4e3; --teacher-border: #ecdfbf; --teacher-bar: #d8b85e; --teacher-tx: #8a6a26;
+
+    --correct-bg: #e6f1e9; --correct-border: #8cc4a4; --correct-tx: #2f6f50; --correct-dot: #3d8a5f;
+
+    --warn-bg: #fbf2dd; --warn-border: #ecd9a6; --warn-tx: #8a6420;
+    --danger-bg: #f8e7e3; --danger-border: #e4a69c; --danger-tx: #9a3f34;
+
+    --shadow-sm: 0 1px 2px rgba(28,26,23,.05), 0 1px 1px rgba(28,26,23,.03);
+    --shadow-md: 0 4px 14px rgba(28,26,23,.07), 0 1px 3px rgba(28,26,23,.05);
+    --shadow-pop: 0 18px 50px rgba(28,26,23,.16), 0 4px 12px rgba(28,26,23,.10);
+
+    --r-lg: 14px; --r-md: 10px; --r-sm: 6px;
+    --ease: cubic-bezier(.16, 1, .3, 1);
+    --nav-h: 58px;
+  }
+  [data-theme="dark"] {
+    --bg: #16161a;
+    --surface: #1e1e24;
+    --surface-sunken: #1a1a20;
+    --surface-hover: #25252c;
+    --border: #2c2c34;
+    --border-strong: #3a3a44;
+
+    --ink: #ededf0;
+    --ink-2: #c3c3ca;
+    --muted: #8d8d97;
+    --faint: #65656f;
+
+    --accent: #7a99d6;
+    --accent-press: #93acdf;
+    --accent-tint: #212a3c;
+    --accent-tint-2: #283450;
+    --accent-line: #36456a;
+    --on-accent: #11151f;
+
+    --tier-found-bg: #38311f; --tier-found-tx: #e2c88a; --tier-found-dt: #c79a3e;
+    --tier-solid-bg: #1f3835; --tier-solid-tx: #8fcabb; --tier-solid-dt: #4f9384;
+    --tier-adv-bg:   #2f2742; --tier-adv-tx:   #c5a3e2; --tier-adv-dt:   #9163b8;
+
+    --teacher-bg: #29251a; --teacher-border: #443d28; --teacher-bar: #b89540; --teacher-tx: #d6b46e;
+
+    --correct-bg: #1c3328; --correct-border: #3a6b50; --correct-tx: #8fcfa8; --correct-dot: #57a87a;
+
+    --warn-bg: #2f2818; --warn-border: #4a3f24; --warn-tx: #d8b76e;
+    --danger-bg: #3a211f; --danger-border: #77413a; --danger-tx: #ee9c90;
+
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.30);
+    --shadow-md: 0 6px 18px rgba(0,0,0,.36);
+    --shadow-pop: 0 22px 55px rgba(0,0,0,.55);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Geist", "SF Pro Text", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: var(--ink);
+    background: var(--bg);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  button, input, select { font-family: inherit; }
+  ::selection { background: var(--accent-tint-2); }
+  .mono { font-family: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace; font-variant-numeric: tabular-nums; }
+  .ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.13em; flex-shrink: 0; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    display: flex; align-items: center; gap: 16px;
+    height: var(--nav-h); padding: 0 18px;
+    background: color-mix(in srgb, var(--surface) 86%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .brand { display: flex; align-items: center; gap: 11px; flex-shrink: 0; }
+  .mark { width: 30px; height: 30px; display: block; }
+  .brand h1 { font-size: 14.5px; margin: 0; font-weight: 640; letter-spacing: -.015em; line-height: 1.1; }
+  .brand .sub { font-size: 10.5px; color: var(--faint); letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
+
+  .meta-strip { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .meta-strip .ct { font-weight: 620; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 38ch; }
+  .vrule { width: 1px; height: 18px; background: var(--border-strong); flex-shrink: 0; }
+  .facts { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: 12px; min-width: 0; overflow: hidden; }
+  .fact { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+  .fact b { color: var(--ink-2); font-weight: 600; }
+  .fact .ico { font-size: 13px; color: var(--faint); }
+  @media (max-width: 980px) { .facts { display: none; } }
+
+  .actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .btn {
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink);
+    padding: 7px 13px; border-radius: var(--r-md); font-size: 13px; font-weight: 560;
+    display: inline-flex; align-items: center; gap: 7px;
+    transition: background .14s var(--ease), border-color .14s, transform .06s;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--surface-hover); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-press); border-color: var(--accent-press); }
+  .btn .ico { font-size: 15px; }
+  .icon-btn { width: 36px; height: 34px; padding: 0; justify-content: center; }
+  .icon-btn .ico { font-size: 17px; color: var(--ink-2); }
+
+  .pill { font-size: 11.5px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+  .pill .ico { font-size: 13px; }
+  .pill.ok { background: var(--correct-bg); color: var(--correct-tx); }
+  .pill.warn { background: var(--warn-bg); color: var(--warn-tx); cursor: help; }
+  .pill.err { background: var(--danger-bg); color: var(--danger-tx); cursor: help; }
+
+  /* ---------- Layout ---------- */
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 320px) minmax(520px, 1fr) minmax(320px, 380px);
+    height: calc(100vh - var(--nav-h));
+    min-width: 0;
+    overflow: hidden;
+  }
+  .layout > * { min-width: 0; }
+  @media (max-width: 1180px) {
+    .layout { grid-template-columns: minmax(280px, 320px) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 320px; }
+    .rail { grid-column: 1 / -1; grid-row: 2; border-left: none; border-top: 1px solid var(--border); }
+  }
+  @media (max-width: 760px) {
+    html, body { height: auto; min-height: 100%; }
+    .topbar { position: sticky; flex-wrap: wrap; height: auto; min-height: var(--nav-h); padding: 10px 12px; gap: 10px; }
+    .meta-strip { order: 3; flex-basis: 100%; }
+    .actions { margin-left: auto; }
+    .layout { display: block; height: auto; overflow: visible; }
+    .sidebar { display: none; }
+    .detail, .rail { height: auto; overflow: visible; }
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar { border-right: 1px solid var(--border); background: var(--surface); display: flex; flex-direction: column; min-height: 0; }
+  .sidebar-tools { padding: 12px 13px 11px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 10px; }
+  .search { position: relative; display: flex; align-items: center; }
+  .search .ico { position: absolute; left: 11px; font-size: 15px; color: var(--faint); pointer-events: none; }
+  .search input {
+    width: 100%; padding: 8px 11px 8px 32px; border: 1px solid var(--border-strong);
+    border-radius: var(--r-md); font-size: 13px; background: var(--surface-sunken); color: var(--ink);
+    outline: none; transition: border-color .14s, box-shadow .14s, background .14s;
+  }
+  .search input::placeholder { color: var(--faint); }
+  .search input:focus { border-color: var(--accent); background: var(--surface); box-shadow: 0 0 0 3px var(--accent-tint); }
+  .tier-filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 4px 11px; font-size: 12px; font-weight: 550; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: background .14s, border-color .14s, color .14s;
+  }
+  .chip:hover { background: var(--surface-hover); }
+  .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .chip .count { opacity: .65; font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] .count { opacity: .85; }
+
+  .list-head { padding: 11px 16px 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+  .student-list { overflow-y: auto; flex: 1; min-height: 0; padding-bottom: 12px; }
+  .srow {
+    display: block; width: 100%; text-align: left; border: none; background: none; cursor: pointer;
+    padding: 11px 15px 12px; border-left: 2.5px solid transparent;
+    transition: background .14s var(--ease);
+  }
+  .srow:hover { background: var(--surface-hover); }
+  .srow.active { background: var(--accent-tint); border-left-color: var(--accent); }
+  .srow-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .srow-name { font-weight: 600; font-size: 13.5px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .srow-email { color: var(--faint); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .srow-meta { color: var(--muted); font-size: 11.5px; margin-top: 7px; display: flex; gap: 6px; align-items: center; }
+  .srow-meta .ico { font-size: 12.5px; color: var(--faint); }
+  .srow-meta .sep { color: var(--faint); }
+  .srow-ctx { margin-top: 8px; display: flex; gap: 5px; flex-wrap: wrap; }
+  .mini-chip { font-size: 11px; color: var(--ink-2); background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--r-sm); padding: 2px 7px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .srow.active .mini-chip { background: color-mix(in srgb, var(--surface) 70%, transparent); }
+  .empty-list { padding: 28px 16px; color: var(--faint); font-size: 13px; text-align: center; }
+  @media (max-width: 760px) { .sidebar { display: none; } }
+
+  /* ---------- Detail ---------- */
+  .detail { overflow-y: auto; min-height: 0; padding: 28px 30px 72px; background: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--accent-tint) 36%, transparent), transparent 34rem), var(--bg); }
+  .detail-inner { width: min(860px, 100%); margin: 0 auto; }
+  @media (max-width: 760px) { .detail { padding: 16px 14px 32px; } .detail-inner { width: 100%; } }
+
+  .mobile-switcher { display: none; margin-bottom: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; box-shadow: var(--shadow-sm); }
+  .mobile-switcher label { display: block; font-size: 10.5px; font-weight: 700; color: var(--faint); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 6px; }
+  .mobile-switcher select { width: 100%; max-width: 100%; border: 1px solid var(--border-strong); border-radius: var(--r-md); background: var(--surface-sunken); color: var(--ink); padding: 8px 10px; font-size: 13px; }
+  @media (max-width: 760px) { .mobile-switcher { display: block; } }
+
+  .student-head { margin-bottom: 6px; }
+  .student-head h2 { font-size: 26px; margin: 0 0 3px; letter-spacing: -.025em; font-weight: 660; line-height: 1.15; }
+  .student-head .email { color: var(--muted); font-size: 13px; }
+  .head-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 15px; }
+  .ctx-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 13px; }
+  .ctx-row .label { font-size: 11px; color: var(--faint); font-weight: 600; letter-spacing: .03em; text-transform: uppercase; margin-right: 2px; }
+
+  .review-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--warn-border); border-radius: var(--r-md); padding: 11px 13px; margin: 0 0 18px; color: var(--ink-2); font-size: 13px; }
+  .review-note.err { border-left-color: var(--danger-border); background: var(--danger-bg); color: var(--danger-tx); }
+
+  /* badges */
+  .badge { font-size: 11px; font-weight: 640; padding: 3px 9px; border-radius: var(--r-sm); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; letter-spacing: .005em; }
+  .badge .ico { font-size: 12px; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .tier-Foundational { background: var(--tier-found-bg); color: var(--tier-found-tx); }
+  .tier-Solid       { background: var(--tier-solid-bg); color: var(--tier-solid-tx); }
+  .tier-Advanced    { background: var(--tier-adv-bg);   color: var(--tier-adv-tx); }
+  .badge.ghost { background: transparent; border: 1px solid var(--border-strong); color: var(--muted); font-weight: 580; }
+  .origin-fixed     { background: var(--surface-sunken); color: var(--ink-2); border: 1px solid var(--border); }
+  .origin-adaptive  { background: var(--accent-tint); color: var(--accent); }
+  .origin-generated { background: var(--tier-adv-bg); color: var(--tier-adv-tx); }
+
+  .time-pill { font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+  .time-pill .ico { font-size: 13px; }
+  .time-pill.ok { background: var(--correct-bg); color: var(--correct-tx); }
+  .time-pill.over { background: var(--warn-bg); color: var(--warn-tx); }
+
+  /* teacher-only sidenote */
+  .teacher { background: var(--teacher-bg); border: 1px solid var(--teacher-border); border-left: 2.5px solid var(--teacher-bar); border-radius: var(--r-md); padding: 13px 15px; margin-top: 14px; }
+  .teacher-tag { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--teacher-tx); margin-bottom: 7px; }
+  .teacher-tag .ico { font-size: 13px; }
+  .teacher p { margin: 0; color: var(--ink-2); }
+  .evidence { margin: 11px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .evidence li { font-size: 12.5px; color: var(--teacher-tx); padding-left: 16px; position: relative; line-height: 1.45; }
+  .evidence li::before { content: ""; position: absolute; left: 3px; top: 8px; width: 5px; height: 5px; border-radius: 50%; background: var(--teacher-bar); }
+
+  /* questions */
+  .q-divider { display: flex; align-items: center; gap: 12px; margin: 30px 0 4px; }
+  .q-divider .lbl { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
+  .q-divider .ln { height: 1px; background: var(--border); flex: 1; }
+
+  .qcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 17px 19px; margin-top: 14px; }
+  .qcard-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .qid { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11.5px; font-weight: 600; color: var(--muted); background: var(--surface-sunken); border: 1px solid var(--border); padding: 2px 7px; border-radius: var(--r-sm); }
+  .qcard-head .spacer { flex: 1; }
+  .qtime { color: var(--muted); font-size: 12px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .qtime .ico { font-size: 13px; color: var(--faint); }
+  .qobjective { color: var(--muted); font-size: 12px; margin-top: 11px; font-weight: 540; }
+  .qprompt { margin-top: 7px; font-size: 15px; line-height: 1.6; white-space: pre-wrap; color: var(--ink); max-width: 66ch; }
+  .qctx { margin-top: 11px; font-size: 12.5px; color: var(--accent); background: var(--accent-tint); display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-sm); }
+  .qctx .ico { font-size: 13px; }
+
+  .alts { list-style: none; margin: 13px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+  .alt { display: flex; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-sunken); }
+  .alt.correct { background: var(--correct-bg); border-color: var(--correct-border); }
+  .alt .mark { flex-shrink: 0; width: 19px; height: 19px; border-radius: 50%; display: grid; place-items: center; border: 1.5px solid var(--border-strong); color: transparent; margin-top: 1px; }
+  .alt .mark .ico { font-size: 12px; }
+  .alt.correct .mark { background: var(--correct-dot); border-color: var(--correct-dot); color: #fff; }
+  .alt-id { font-weight: 700; text-transform: uppercase; color: var(--muted); margin-right: 3px; }
+  .alt.correct .alt-id { color: var(--correct-tx); }
+  .alt-text { font-size: 13.5px; color: var(--ink); }
+  .alt.correct .alt-text { font-weight: 560; color: var(--correct-tx); }
+  .alt-rationale { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+
+  .numeric-box { margin-top: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .data-only-tag { background: var(--surface-sunken); border: 1px solid var(--border); color: var(--ink-2); font-weight: 560; font-size: 12px; padding: 5px 11px; border-radius: var(--r-md); display: inline-flex; align-items: center; gap: 7px; }
+  .data-only-tag .ico { font-size: 14px; color: var(--muted); }
+  .num-fact { background: var(--surface-sunken); border: 1px solid var(--border); padding: 5px 11px; border-radius: var(--r-md); font-size: 12.5px; color: var(--ink-2); }
+  .num-fact b { font-variant-numeric: tabular-nums; color: var(--ink); }
+
+  .rubric { margin-top: 13px; background: var(--surface-sunken); border: 1px solid var(--border); border-radius: var(--r-md); padding: 11px 13px; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+  .rubric .rubric-tag { font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); display: block; margin-bottom: 5px; }
+
+  /* ---------- Review rail ---------- */
+  .rail { border-left: 1px solid var(--border); background: var(--surface); overflow-y: auto; min-height: 0; padding: 18px 17px 56px; }
+  @media (max-width: 760px) { .rail { border-left: none; border-top: 1px solid var(--border); padding: 16px 14px 40px; } }
+  .rail-inner { display: flex; flex-direction: column; gap: 14px; }
+  .rail-section { border: 1px solid var(--border); border-radius: var(--r-lg); background: var(--surface-sunken); padding: 14px; box-shadow: var(--shadow-sm); }
+  .rail-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+  .rail-title h3 { margin: 0; font-size: 13px; font-weight: 690; letter-spacing: -.01em; }
+  .rail-kicker { font-size: 10.5px; color: var(--faint); font-weight: 700; letter-spacing: .07em; text-transform: uppercase; margin-bottom: 3px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stat { border: 1px solid var(--border); background: var(--surface); border-radius: var(--r-md); padding: 9px 10px; min-width: 0; }
+  .stat b { display: block; font-size: 18px; line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+  .stat span { color: var(--muted); font-size: 11px; }
+  .mix-list { display: flex; flex-direction: column; gap: 8px; }
+  .mix-row { display: grid; grid-template-columns: 86px 1fr 28px; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+  .mix-bar { height: 7px; background: var(--border); border-radius: 999px; overflow: hidden; }
+  .mix-fill { height: 100%; background: var(--accent); border-radius: inherit; min-width: 2px; }
+  .issue-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 7px; }
+  .issue { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--warn-border); border-radius: var(--r-md); padding: 8px 10px; font-size: 12px; color: var(--ink-2); }
+  .issue.error { border-left-color: var(--danger-border); }
+  .issue-code { display: block; font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); font-weight: 700; margin-bottom: 2px; }
+  .teacher-rail p { margin: 0; color: var(--ink-2); }
+  .teacher-rail .evidence { margin-top: 10px; }
+  .just-list { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+  .just-item { border-top: 1px solid var(--border); padding-top: 9px; }
+  .just-item:first-child { border-top: 0; padding-top: 0; }
+  .just-item b { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; color: var(--muted); display: block; margin-bottom: 3px; }
+  .just-item p { margin: 0; color: var(--ink-2); font-size: 12.5px; line-height: 1.45; }
+
+  .warnings { background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-tx); border-radius: var(--r-md); padding: 11px 14px; margin-bottom: 20px; font-size: 13px; }
+  .warnings summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+  .warnings ul { margin: 9px 0 0; padding-left: 19px; }
+  .warnings li { margin: 3px 0; }
+
+  /* ---------- Empty state ---------- */
+  .empty { display: grid; place-items: center; height: 100%; text-align: center; color: var(--muted); padding: 24px; }
+  .empty .ill { width: 56px; height: 56px; color: var(--faint); margin: 0 auto 16px; }
+  .empty .ill .ico { width: 100%; height: 100%; }
+  .empty h3 { margin: 0 0 7px; color: var(--ink); font-size: 18px; letter-spacing: -.01em; font-weight: 620; }
+  .empty p { margin: 0 auto 20px; max-width: 400px; line-height: 1.55; }
+  .empty .hint { font-size: 12.5px; color: var(--faint); margin-top: 18px; }
+  .muted-copy { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+  .kbd { font-family: ui-monospace, Menlo, monospace; font-size: 11px; background: var(--surface-sunken); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; padding: 1px 6px; color: var(--ink-2); }
+
+  /* ---------- Drop overlay ---------- */
+  .drop-overlay { position: fixed; inset: 0; z-index: 60; background: color-mix(in srgb, var(--accent) 14%, transparent); backdrop-filter: blur(3px); display: none; place-items: center; padding: 40px; }
+  .drop-overlay.show { display: grid; }
+  .drop-card { border: 2px dashed var(--accent); background: var(--surface); border-radius: 18px; padding: 40px 60px; text-align: center; box-shadow: var(--shadow-pop); }
+  .drop-card .ico { font-size: 38px; color: var(--accent); }
+  .drop-card h3 { margin: 14px 0 4px; font-size: 17px; }
+  .drop-card p { margin: 0; color: var(--muted); }
+
+  /* ---------- Toast ---------- */
+  .toast-wrap { position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%); z-index: 80; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast { background: var(--ink); color: var(--bg); font-size: 13px; font-weight: 500; padding: 10px 16px; border-radius: 999px; box-shadow: var(--shadow-pop); display: flex; align-items: center; gap: 9px; }
+  .toast.err { background: #b4382e; color: #fff; }
+  .toast .ico { font-size: 15px; }
+
+  .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* ---------- Motion (gated) ---------- */
+  @media (prefers-reduced-motion: no-preference) {
+    .detail-inner { animation: rise .34s var(--ease) both; }
+    .qcard { animation: rise .42s var(--ease) both; animation-delay: calc(var(--i, 0) * 45ms); }
+    .toast { animation: pop .26s var(--ease) both; }
+    .drop-card { animation: pop .2s var(--ease) both; }
+    @keyframes rise { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: none; } }
+    @keyframes pop { from { opacity: 0; transform: translateY(8px) scale(.97); } to { opacity: 1; transform: none; } }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="1" y="1" width="30" height="30" rx="8" fill="var(--accent)"/>
+      <circle cx="16" cy="16" r="8.5" stroke="var(--on-accent)" stroke-width="1.6" opacity="0.55"/>
+      <circle cx="16" cy="16" r="3.4" fill="var(--on-accent)"/>
+    </svg>
+    <div>
+      <h1>Teachvatory Studio</h1>
+      <div class="sub">Assessment Review Console</div>
+    </div>
+  </div>
+  <div class="meta-strip" id="metaStrip"></div>
+  <div class="actions">
+    <span id="statusPill"></span>
+    <button class="btn icon-btn" id="themeBtn" title="Toggle light / dark" aria-label="Toggle theme"></button>
+    <button class="btn" id="sampleBtn">Sample</button>
+    <button class="btn primary" id="loadBtn"><span id="loadIco"></span>Load JSON</button>
+    <input type="file" id="fileInput" accept=".json,application/json" class="visually-hidden">
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-tools">
+      <div class="search">
+        <span id="searchIco"></span>
+        <input type="text" id="searchInput" placeholder="Search students…" aria-label="Search students">
+      </div>
+      <div class="tier-filters" id="tierFilters"></div>
+    </div>
+    <div class="list-head" id="listHead"></div>
+    <div class="student-list" id="studentList"></div>
+  </aside>
+
+  <main class="detail" id="detail"></main>
+  <aside class="rail" id="rail"></aside>
+</div>
+
+<div class="drop-overlay" id="dropOverlay">
+  <div class="drop-card">
+    <span id="dropIco"></span>
+    <h3>Drop the assessment JSON</h3>
+    <p>Release to load it into the viewer</p>
+  </div>
+</div>
+
+<div class="toast-wrap" id="toastWrap"></div>
+
+<script>
+"use strict";
+
+/* ---------------- Icons (consistent 24-grid line set, single stroke) ---------------- */
+const P = 'stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+const ICONS = {
+  search:  `<circle cx="11" cy="11" r="7" ${P}/><line x1="21" y1="21" x2="16.65" y2="16.65" ${P}/>`,
+  eye:     `<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" ${P}/><circle cx="12" cy="12" r="3" ${P}/>`,
+  target:  `<circle cx="12" cy="12" r="8" ${P}/><circle cx="12" cy="12" r="2.4" ${P}/><line x1="12" y1="1.6" x2="12" y2="4.4" ${P}/><line x1="12" y1="19.6" x2="12" y2="22.4" ${P}/><line x1="1.6" y1="12" x2="4.4" y2="12" ${P}/><line x1="19.6" y1="12" x2="22.4" y2="12" ${P}/>`,
+  chart:   `<line x1="4" y1="20" x2="20.5" y2="20" ${P}/><rect x="5.5" y="11" width="3.2" height="6.5" ${P}/><rect x="10.4" y="6.5" width="3.2" height="11" ${P}/><rect x="15.3" y="13.5" width="3.2" height="4" ${P}/>`,
+  check:   `<polyline points="20 6.5 9 17.5 4 12.5" ${P}/>`,
+  checkc:  `<circle cx="12" cy="12" r="9" ${P}/><polyline points="8.3 12.4 11 15 16 9.4" ${P}/>`,
+  warn:    `<path d="M12 3 2.6 20h18.8L12 3Z" ${P}/><line x1="12" y1="9.5" x2="12" y2="14" ${P}/><circle cx="12" cy="17" r=".6" fill="currentColor" stroke="none"/>`,
+  sun:     `<circle cx="12" cy="12" r="4" ${P}/><g ${P}><line x1="12" y1="2.5" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="21.5"/><line x1="2.5" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21.5" y2="12"/><line x1="5.2" y1="5.2" x2="6.9" y2="6.9"/><line x1="17.1" y1="17.1" x2="18.8" y2="18.8"/><line x1="5.2" y1="18.8" x2="6.9" y2="17.1"/><line x1="17.1" y1="6.9" x2="18.8" y2="5.2"/></g>`,
+  moon:    `<path d="M21 12.9A8.5 8.5 0 1 1 11.1 3 6.7 6.7 0 0 0 21 12.9Z" ${P}/>`,
+  filedown:`<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z" ${P}/><polyline points="14 3 14 8 19 8" ${P}/><line x1="12" y1="11" x2="12" y2="17" ${P}/><polyline points="9 14.3 12 17.3 15 14.3" ${P}/>`,
+  folder:  `<path d="M3 7a2 2 0 0 1 2-2h3.7l2 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" ${P}/>`,
+  clock:   `<circle cx="12" cy="12" r="8.5" ${P}/><polyline points="12 7 12 12 15.3 13.8" ${P}/>`,
+  lock:    `<rect x="5" y="11" width="14" height="9" rx="2" ${P}/><path d="M8 11V8a4 4 0 0 1 8 0v3" ${P}/>`,
+  sparkle: `<path d="M12 3.2 13.7 9 19.5 10.6 13.7 12.2 12 18 10.3 12.2 4.5 10.6 10.3 9Z" ${P}/>`,
+  sliders: `<line x1="4" y1="8" x2="20" y2="8" ${P}/><circle cx="9" cy="8" r="2.5" fill="var(--bg)" ${P}/><line x1="4" y1="16" x2="20" y2="16" ${P}/><circle cx="15" cy="16" r="2.5" fill="var(--bg)" ${P}/>`,
+  list:    `<line x1="8" y1="7" x2="20" y2="7" ${P}/><line x1="8" y1="12" x2="20" y2="12" ${P}/><line x1="8" y1="17" x2="20" y2="17" ${P}/><circle cx="4.2" cy="7" r=".7" fill="currentColor" stroke="none"/><circle cx="4.2" cy="12" r=".7" fill="currentColor" stroke="none"/><circle cx="4.2" cy="17" r=".7" fill="currentColor" stroke="none"/>`,
+};
+function ic(name, cls) { return `<svg class="ico ${cls || ""}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`; }
+const ORIGIN_ICON = { fixed: "lock", adaptive: "sliders", generated: "sparkle" };
+
+const TIER_ORDER = { Foundational: 0, Solid: 1, Advanced: 2 };
+const TIER_NAMES = ["Foundational", "Solid", "Advanced"];
+const ORIGIN_NAMES = ["fixed", "adaptive", "generated"];
+const TYPE_NAMES = ["alternative", "open_ended", "numeric"];
+const DIFFICULTY_NAMES = ["foundational", "solid", "advanced"];
+const EMPTY_REVIEW = {
+  issues: [],
+  stats: {
+    studentCount: 0,
+    totalQuestions: 0,
+    tierCounts: { Foundational: 0, Solid: 0, Advanced: 0 },
+    originCounts: { fixed: 0, adaptive: 0, generated: 0 },
+    typeCounts: { alternative: 0, open_ended: 0, numeric: 0 },
+    overBudgetStudents: 0,
+    fixedQuestionDrift: 0,
+    missingTeacherNotes: 0
+  }
+};
+function cloneReviewTemplate() {
+  return typeof structuredClone === "function" ? structuredClone(EMPTY_REVIEW) : JSON.parse(JSON.stringify(EMPTY_REVIEW));
+}
+const state = { data: null, filename: null, selectedId: null, search: "", tierFilter: "All", review: cloneReviewTemplate() };
+const $ = (id) => document.getElementById(id);
+
+function esc(s) {
+  return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+/* ---------------- Theme ---------------- */
+function getStored(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }
+function setStored(k, v) { try { localStorage.setItem(k, v); } catch (_) {} }
+function applyTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  $("themeBtn").innerHTML = ic(t === "dark" ? "sun" : "moon");
+}
+function initTheme() {
+  const stored = getStored("ts-theme");
+  const sys = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  applyTheme(stored || sys);
+}
+
+/* ---------------- Review validation ---------------- */
+function isPlainObject(v) {
+  return v != null && typeof v === "object" && !Array.isArray(v);
+}
+function isNonEmptyString(v) {
+  return typeof v === "string" && v.trim().length > 0;
+}
+function isFiniteNumber(v) {
+  return typeof v === "number" && Number.isFinite(v);
+}
+function issueCounts(review) {
+  const issues = (review && review.issues) || [];
+  return {
+    errors: issues.filter((i) => i.severity === "error").length,
+    warnings: issues.filter((i) => i.severity === "warning").length,
+    total: issues.length
+  };
+}
+function reviewAssessment(data) {
+  const review = cloneReviewTemplate();
+  const { issues, stats } = review;
+  const fixedById = new Map();
+  const addIssue = (severity, code, path, message) => issues.push({ severity, code, path, message });
+  const requireString = (obj, key, path) => {
+    if (!isNonEmptyString(obj[key])) addIssue("error", "missing-field", `${path}.${key}`, `Missing non-empty string '${key}'.`);
+  };
+  const requireNumber = (obj, key, path) => {
+    if (!isFiniteNumber(obj[key])) addIssue("error", "missing-field", `${path}.${key}`, `Missing numeric '${key}'.`);
+  };
+
+  if (!isPlainObject(data)) {
+    addIssue("error", "invalid-root", "$", "Root must be a JSON object.");
+    return review;
+  }
+
+  const meta = isPlainObject(data.assessment_meta) ? data.assessment_meta : null;
+  if (!meta) addIssue("error", "missing-field", "assessment_meta", "Missing assessment_meta object.");
+  else {
+    if (!Number.isInteger(meta.class_number)) addIssue("error", "missing-field", "assessment_meta.class_number", "class_number must be an integer.");
+    requireString(meta, "class_title", "assessment_meta");
+    requireString(meta, "assessment_label", "assessment_meta");
+    requireNumber(meta, "time_budget_target_min", "assessment_meta");
+    if (typeof meta.includes_reading !== "boolean") addIssue("error", "missing-field", "assessment_meta.includes_reading", "includes_reading must be boolean.");
+  }
+
+  if (!Array.isArray(data.students)) {
+    addIssue("error", "missing-field", "students", "students must be a non-empty array.");
+    return review;
+  }
+  if (data.students.length === 0) addIssue("error", "empty-array", "students", "students array is empty.");
+  stats.studentCount = data.students.length;
+
+  data.students.forEach((student, i) => {
+    const path = `students[${i}]`;
+    const s = isPlainObject(student) ? student : {};
+    const label = s.student_name || s.student_id || path;
+
+    requireString(s, "student_id", path);
+    requireString(s, "student_name", path);
+    requireString(s, "general_assessment", path);
+    requireNumber(s, "estimated_total_time_min", path);
+    if (!TIER_NAMES.includes(s.tier)) addIssue("error", "invalid-enum", `${path}.tier`, `${label}: tier must be Foundational, Solid, or Advanced.`);
+    else stats.tierCounts[s.tier]++;
+    if (!Array.isArray(s.questions)) {
+      addIssue("error", "missing-field", `${path}.questions`, `${label}: questions must be an array.`);
+      return;
+    }
+    if (!Array.isArray(s.evidence_basis) || s.evidence_basis.length === 0) {
+      stats.missingTeacherNotes++;
+      addIssue("warning", "missing-teacher-evidence", `${path}.evidence_basis`, `${label}: evidence_basis is missing or empty.`);
+    }
+    if (!isNonEmptyString(s.general_assessment)) stats.missingTeacherNotes++;
+    if (meta && isFiniteNumber(meta.time_budget_target_min) && isFiniteNumber(s.estimated_total_time_min) && s.estimated_total_time_min > meta.time_budget_target_min) {
+      stats.overBudgetStudents++;
+      addIssue("warning", "over-budget", `${path}.estimated_total_time_min`, `${label}: estimated time exceeds the assessment target.`);
+    }
+
+    let questionTimeSum = 0;
+    let hasAllQuestionTimes = true;
+    stats.totalQuestions += s.questions.length;
+    s.questions.forEach((question, j) => {
+      const qPath = `${path}.questions[${j}]`;
+      const q = isPlainObject(question) ? question : {};
+      const qid = isNonEmptyString(q.question_id) ? q.question_id : `question[${j}]`;
+
+      requireString(q, "question_id", qPath);
+      requireString(q, "objective", qPath);
+      requireString(q, "prompt", qPath);
+      requireString(q, "justification", qPath);
+      requireNumber(q, "time_estimate_min", qPath);
+      if (isFiniteNumber(q.time_estimate_min)) questionTimeSum += q.time_estimate_min;
+      else hasAllQuestionTimes = false;
+      if (!ORIGIN_NAMES.includes(q.origin)) addIssue("error", "invalid-enum", `${qPath}.origin`, `${label} / ${qid}: origin must be fixed, adaptive, or generated.`);
+      else stats.originCounts[q.origin]++;
+      if (!TYPE_NAMES.includes(q.type)) addIssue("error", "invalid-enum", `${qPath}.type`, `${label} / ${qid}: type must be alternative, open_ended, or numeric.`);
+      else stats.typeCounts[q.type]++;
+      if (!DIFFICULTY_NAMES.includes(q.difficulty)) addIssue("error", "invalid-enum", `${qPath}.difficulty`, `${label} / ${qid}: difficulty must be foundational, solid, or advanced.`);
+      if (!isNonEmptyString(q.justification)) {
+        stats.missingTeacherNotes++;
+        addIssue("warning", "missing-teacher-justification", `${qPath}.justification`, `${label} / ${qid}: justification is missing or empty.`);
+      }
+
+      if (q.origin === "fixed") {
+        const fp = fixedById.get(q.question_id) || [];
+        fp.push({ student: label, path: qPath, prompt: q.prompt, type: q.type, objective: q.objective });
+        fixedById.set(q.question_id, fp);
+      }
+
+      if (q.type === "alternative") {
+        if (!Array.isArray(q.alternatives) || q.alternatives.length === 0) {
+          addIssue("error", "missing-field", `${qPath}.alternatives`, `${label} / ${qid}: alternatives must be a non-empty array.`);
+        } else {
+          let hasCorrect = false;
+          q.alternatives.forEach((a, k) => {
+            const aPath = `${qPath}.alternatives[${k}]`;
+            const alt = isPlainObject(a) ? a : {};
+            requireString(alt, "id", aPath);
+            requireString(alt, "text", aPath);
+            if (typeof alt.is_correct !== "boolean") addIssue("error", "missing-field", `${aPath}.is_correct`, `${label} / ${qid}: alternative is_correct must be boolean.`);
+            if (alt.is_correct === true) hasCorrect = true;
+          });
+          if (!hasCorrect) addIssue("warning", "missing-correct-answer", `${qPath}.alternatives`, `${label} / ${qid}: no correct alternative is marked.`);
+        }
+      }
+
+      if (q.type === "numeric") {
+        if (!isPlainObject(q.numeric_answer)) {
+          addIssue("warning", "missing-numeric-answer", `${qPath}.numeric_answer`, `${label} / ${qid}: numeric_answer is missing.`);
+        } else {
+          const na = q.numeric_answer;
+          if (typeof na.is_data_collection_only !== "boolean") addIssue("error", "missing-field", `${qPath}.numeric_answer.is_data_collection_only`, `${label} / ${qid}: is_data_collection_only must be boolean.`);
+          if (Array.isArray(na.acceptable_range) && !na.acceptable_range.every(isFiniteNumber)) addIssue("error", "invalid-number", `${qPath}.numeric_answer.acceptable_range`, `${label} / ${qid}: acceptable_range must contain numbers only.`);
+        }
+      }
+    });
+
+    if (hasAllQuestionTimes && isFiniteNumber(s.estimated_total_time_min) && Math.abs(questionTimeSum - s.estimated_total_time_min) > 0.5) {
+      addIssue("warning", "time-mismatch", `${path}.estimated_total_time_min`, `${label}: student total differs from summed question time (${questionTimeSum}).`);
+    }
+  });
+
+  fixedById.forEach((items, id) => {
+    const variants = new Set(items.map((x) => JSON.stringify({ prompt: x.prompt, type: x.type, objective: x.objective })));
+    if (variants.size > 1) {
+      stats.fixedQuestionDrift++;
+      addIssue("error", "fixed-question-drift", `questions.${id}`, `Fixed question ${id} varies across students.`);
+    }
+  });
+
+  return review;
+}
+
+/* ---------------- Load ---------------- */
+function loadData(obj, filename) {
+  const review = reviewAssessment(obj);
+  state.data = obj;
+  state.filename = filename || null;
+  state.review = review;
+  state.search = ""; state.tierFilter = "All";
+  $("searchInput").value = "";
+  state.selectedId = null;
+  reconcileSelection();
+  renderAll();
+}
+function loadFromFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    let parsed;
+    try { parsed = JSON.parse(e.target.result); }
+    catch (err) { toast("Couldn't parse JSON: " + err.message, "err"); return; }
+    try { loadData(parsed, file.name); toast("Loaded " + file.name, "ok"); }
+    catch (err) { toast("Couldn't review JSON: " + err.message, "err"); }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------------- Top bar ---------------- */
+function renderTopbar() {
+  const meta = (state.data && state.data.assessment_meta) || {};
+  const strip = $("metaStrip");
+  if (!state.data) { strip.innerHTML = ""; $("statusPill").innerHTML = ""; return; }
+
+  const n = Array.isArray(state.data.students) ? state.data.students.length : 0;
+  const facts = [];
+  if (meta.class_number != null) facts.push(`<span class="fact"><b>Class ${esc(meta.class_number)}</b></span>`);
+  facts.push(`<span class="fact">${ic("list")} ${n} student${n === 1 ? "" : "s"}</span>`);
+  if (meta.time_budget_target_min != null) facts.push(`<span class="fact">${ic("clock")} <b>${esc(meta.time_budget_target_min)}</b> min budget</span>`);
+
+  strip.innerHTML =
+    `<span class="ct">${esc(meta.class_title || "Untitled assessment")}</span>` +
+    `<span class="vrule"></span>` +
+    `<span class="facts">${facts.join("")}</span>`;
+
+  const pill = $("statusPill");
+  const counts = issueCounts(state.review);
+  const title = ((state.review && state.review.issues) || []).map((i) => `${i.severity}: ${i.message}`).join("\n");
+  if (counts.total === 0) pill.innerHTML = `<span class="pill ok">${ic("checkc")} review clean</span>`;
+  else if (counts.errors > 0) pill.innerHTML = `<span class="pill err" title="${esc(title)}">${ic("warn")} ${counts.total} issue${counts.total === 1 ? "" : "s"} · preview</span>`;
+  else pill.innerHTML = `<span class="pill warn" title="${esc(title)}">${ic("warn")} ${counts.warnings} warning${counts.warnings === 1 ? "" : "s"}</span>`;
+}
+
+/* ---------------- Tier filters ---------------- */
+function tierCounts() {
+  const c = { All: 0, Foundational: 0, Solid: 0, Advanced: 0 };
+  ((state.data && state.data.students) || []).forEach((s) => { c.All++; if (s.tier in c) c[s.tier]++; });
+  return c;
+}
+const TIER_DOT = { Foundational: "--tier-found-dt", Solid: "--tier-solid-dt", Advanced: "--tier-adv-dt" };
+function renderTierFilters() {
+  if (!state.data) { $("tierFilters").innerHTML = ""; return; }
+  const counts = tierCounts();
+  $("tierFilters").innerHTML = ["All", "Foundational", "Solid", "Advanced"].map((t) => {
+    const dot = TIER_DOT[t] ? `<span class="dot" style="background:var(${TIER_DOT[t]})"></span>` : "";
+    const short = t === "Foundational" ? "Found." : t;
+    return `<button class="chip" data-tier="${t}" aria-pressed="${state.tierFilter === t}">${dot}${short}<span class="count">${counts[t] || 0}</span></button>`;
+  }).join("");
+  $("tierFilters").querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => {
+    state.tierFilter = b.dataset.tier;
+    reconcileSelection();
+    renderAll();
+  }));
+}
+
+/* ---------------- Sidebar ---------------- */
+function filteredStudents() {
+  let list = (state.data && state.data.students) || [];
+  if (state.tierFilter !== "All") list = list.filter((s) => s.tier === state.tierFilter);
+  const q = state.search.trim().toLowerCase();
+  if (q) list = list.filter((s) =>
+    (s.student_name || "").toLowerCase().includes(q) ||
+    (s.student_id || "").toLowerCase().includes(q) ||
+    (s.surface_contexts || []).join(" ").toLowerCase().includes(q));
+  return list;
+}
+function reconcileSelection() {
+  const list = filteredStudents();
+  if (!list.length) { state.selectedId = null; return; }
+  if (!list.some((s) => s.student_id === state.selectedId)) state.selectedId = list[0].student_id;
+}
+function renderAll() {
+  renderTopbar(); renderTierFilters(); renderSidebar(); renderDetail(); renderRail();
+}
+function renderSidebar() {
+  const list = $("studentList"); const head = $("listHead");
+  if (!state.data) { list.innerHTML = ""; head.innerHTML = ""; return; }
+  const students = filteredStudents();
+  head.textContent = `${students.length} of ${state.data.students.length}`;
+  if (!students.length) { list.innerHTML = `<div class="empty-list">No students match your filter.</div>`; return; }
+  list.innerHTML = students.map((s) => {
+    const nq = Array.isArray(s.questions) ? s.questions.length : 0;
+    const t = esc(s.tier || "Untiered");
+    const time = s.estimated_total_time_min != null ? `${esc(s.estimated_total_time_min)} min` : "";
+    const dot = TIER_DOT[s.tier] ? `<span class="dot" style="background:var(${TIER_DOT[s.tier]})"></span>` : "";
+    const ctx = (s.surface_contexts || []).slice(0, 2).map((c) => `<span class="mini-chip">${esc(c)}</span>`).join("");
+    return `<button class="srow ${s.student_id === state.selectedId ? "active" : ""}" data-id="${esc(s.student_id)}">
+      <div class="srow-top">
+        <span class="srow-name">${esc(s.student_name || s.student_id)}</span>
+        <span class="badge tier-${t}">${dot}${t}</span>
+      </div>
+      <div class="srow-email">${esc(s.student_id || "")}</div>
+      <div class="srow-meta"><span>${nq} question${nq === 1 ? "" : "s"}</span>${time ? `<span class="sep">·</span><span>${ic("clock")} ${time}</span>` : ""}</div>
+      ${ctx ? `<div class="srow-ctx">${ctx}</div>` : ""}
+    </button>`;
+  }).join("");
+  list.querySelectorAll(".srow").forEach((row) => row.addEventListener("click", () => selectStudent(row.dataset.id)));
+}
+function selectStudent(id) {
+  if (id == null) return;
+  state.selectedId = id;
+  renderSidebar(); renderDetail(); renderRail();
+  const active = $("studentList").querySelector(".srow.active");
+  if (active) active.scrollIntoView({ block: "nearest" });
+}
+
+/* ---------------- Detail ---------------- */
+function selectedStudent() {
+  return ((state.data && state.data.students) || []).find((s) => s.student_id === state.selectedId) || null;
+}
+function renderMobileSwitcher() {
+  const students = filteredStudents();
+  if (!students.length) return `<div class="mobile-switcher"><label for="mobileStudentSelect">Student</label><select id="mobileStudentSelect" disabled><option>No matches</option></select></div>`;
+  return `<div class="mobile-switcher"><label for="mobileStudentSelect">Student</label><select id="mobileStudentSelect" aria-label="Select student">${students.map((s) => `<option value="${esc(s.student_id)}" ${s.student_id === state.selectedId ? "selected" : ""}>${esc(s.student_name || s.student_id)}</option>`).join("")}</select></div>`;
+}
+function bindMobileSwitcher() {
+  const sel = $("mobileStudentSelect");
+  if (sel) sel.addEventListener("change", (e) => selectStudent(e.target.value));
+}
+function renderQuestion(q, i) {
+  const origin = esc(q.origin || ""); const type = esc(q.type || ""); const diff = (q.difficulty || "").toLowerCase();
+  const time = q.time_estimate_min != null ? `~${esc(q.time_estimate_min)} min` : "";
+  const oico = ORIGIN_ICON[q.origin] ? ic(ORIGIN_ICON[q.origin]) : "";
+
+  let typeBlock = "";
+  if (q.type === "alternative" && Array.isArray(q.alternatives)) {
+    typeBlock = `<ul class="alts">` + q.alternatives.map((a) => `
+      <li class="alt ${a.is_correct ? "correct" : ""}">
+        <span class="mark">${a.is_correct ? ic("check") : ""}</span>
+        <div><div class="alt-text"><span class="alt-id">${esc(a.id)}.</span>${esc(a.text)}</div>
+        ${a.rationale ? `<div class="alt-rationale">${esc(a.rationale)}</div>` : ""}</div>
+      </li>`).join("") + `</ul>`;
+  } else if (q.type === "numeric" && q.numeric_answer) {
+    const na = q.numeric_answer;
+    if (na.is_data_collection_only) typeBlock = `<div class="numeric-box"><span class="data-only-tag">${ic("chart")} Data collection only, no correct answer</span></div>`;
+    else {
+      const f = [];
+      if (na.expected != null) f.push(`<span class="num-fact">Expected <b>${esc(na.expected)}</b></span>`);
+      if (Array.isArray(na.acceptable_range) && na.acceptable_range.length) f.push(`<span class="num-fact">Range <b>${na.acceptable_range.map(esc).join("-")}</b></span>`);
+      typeBlock = f.length ? `<div class="numeric-box">${f.join("")}</div>` : "";
+    }
+  }
+  if (q.rubric) typeBlock += `<div class="rubric"><span class="rubric-tag">Rubric</span>${esc(q.rubric)}</div>`;
+
+  return `<div class="qcard" style="--i:${i}">
+    <div class="qcard-head">
+      <span class="qid">${esc(q.question_id || "?")}</span>
+      ${origin ? `<span class="badge origin-${origin}">${oico}${origin}</span>` : ""}
+      ${type ? `<span class="badge ghost">${type.replace("_", " ")}</span>` : ""}
+      ${diff ? `<span class="badge ghost">${diff}</span>` : ""}
+      <span class="spacer"></span>
+      ${time ? `<span class="qtime">${ic("clock")}${time}</span>` : ""}
+    </div>
+    ${q.objective ? `<div class="qobjective">${esc(q.objective)}</div>` : ""}
+    <div class="qprompt">${esc(q.prompt)}</div>
+    ${q.context_personalization ? `<div class="qctx">${ic("target")}${esc(q.context_personalization)}</div>` : ""}
+    ${typeBlock}
+  </div>`;
+}
+function renderDetail() {
+  const el = $("detail");
+  if (!state.data) {
+    el.innerHTML = `<div class="empty"><div>
+      <div class="ill">${ic("folder")}</div>
+      <h3>No assessment loaded</h3>
+      <p>Drag &amp; drop a generated assessment JSON to review quiz structure, timing, fixed-question consistency, and teacher notes.</p>
+      <button class="btn primary" onclick="document.getElementById('sampleBtn').click()">Open the sample (Class 3)</button>
+      <div class="hint">Local instructor console. No student responses are collected.</div>
+    </div></div>`;
+    return;
+  }
+  const s = selectedStudent();
+  const counts = issueCounts(state.review);
+  const reviewNote = counts.total
+    ? `<div class="review-note ${counts.errors ? "err" : ""}">${ic("warn")} Review issues detected - rendering preview. See the audit rail for details.</div>`
+    : "";
+  const mobile = renderMobileSwitcher();
+  if (!s) { el.innerHTML = `<div class="detail-inner">${mobile}${reviewNote}<div class="empty"><div><h3>No student selected in this filter</h3><p>Clear the search or choose a different tier.</p></div></div></div>`; bindMobileSwitcher(); return; }
+
+  const meta = state.data.assessment_meta || {};
+  const target = meta.time_budget_target_min, est = s.estimated_total_time_min;
+  let timePill = "";
+  if (est != null) {
+    const over = target != null && est > target;
+    timePill = `<span class="time-pill ${over ? "over" : "ok"}">${ic("clock")}${esc(est)} min${target != null ? ` / ${esc(target)} target` : ""}${over ? " · over" : ""}</span>`;
+  }
+  const ctx = (s.surface_contexts || []);
+  const questions = Array.isArray(s.questions) ? s.questions : [];
+
+  el.innerHTML = `<div class="detail-inner">
+    ${mobile}
+    ${reviewNote}
+    <div class="student-head">
+      <h2>${esc(s.student_name || s.student_id)}</h2>
+      <div class="email">${esc(s.student_id || "")}</div>
+      <div class="head-meta">
+        <span class="badge tier-${esc(s.tier)}">${TIER_DOT[s.tier] ? `<span class="dot" style="background:var(${TIER_DOT[s.tier]})"></span>` : ""}${esc(s.tier || "Untiered")}</span>
+        ${timePill}
+        <span class="badge ghost">${questions.length} question${questions.length === 1 ? "" : "s"}</span>
+      </div>
+      ${ctx.length ? `<div class="ctx-row"><span class="label">Surface context</span>${ctx.map((c) => `<span class="mini-chip">${esc(c)}</span>`).join("")}</div>` : ""}
+    </div>
+    <div class="q-divider"><span class="lbl">Questions</span><span class="ln"></span></div>
+    ${questions.map(renderQuestion).join("")}
+  </div>`;
+  bindMobileSwitcher();
+  el.scrollTop = 0;
+}
+
+function pct(n, total) {
+  return total ? Math.round((n / total) * 100) : 0;
+}
+function renderMixRows(obj, total, labels) {
+  return `<div class="mix-list">${labels.map((label) => {
+    const n = obj[label] || 0;
+    return `<div class="mix-row"><span>${esc(label.replace("_", " "))}</span><div class="mix-bar"><div class="mix-fill" style="width:${pct(n, total)}%"></div></div><b>${n}</b></div>`;
+  }).join("")}</div>`;
+}
+function renderIssueList() {
+  const issues = ((state.review && state.review.issues) || []).slice(0, 8);
+  if (!issues.length) return `<p class="muted-copy">No review issues found in this file.</p>`;
+  return `<ul class="issue-list">${issues.map((issue) => `<li class="issue ${esc(issue.severity)}"><span class="issue-code">${esc(issue.severity)} · ${esc(issue.code)} · ${esc(issue.path)}</span>${esc(issue.message)}</li>`).join("")}</ul>`;
+}
+function renderRail() {
+  const rail = $("rail");
+  if (!rail) return;
+  if (!state.data) {
+    rail.innerHTML = `<div class="rail-inner"><section class="rail-section"><div class="rail-kicker">Review health</div><p class="muted-copy">Load a generated assessment JSON to inspect file health.</p></section></div>`;
+    return;
+  }
+  const s = selectedStudent();
+  const stats = (state.review && state.review.stats) || cloneReviewTemplate().stats;
+  const counts = issueCounts(state.review);
+  const statusBadge = counts.total === 0
+    ? `<span class="pill ok">${ic("checkc")} clean</span>`
+    : counts.errors
+      ? `<span class="pill err">${ic("warn")} ${counts.total} issue${counts.total === 1 ? "" : "s"}</span>`
+      : `<span class="pill warn">${ic("warn")} ${counts.warnings} warning${counts.warnings === 1 ? "" : "s"}</span>`;
+  const teacher = s ? `
+    <section class="rail-section teacher-rail">
+      <div class="rail-kicker">Teacher notes</div>
+      <div class="rail-title"><h3>${esc(s.student_name || s.student_id)}</h3></div>
+      ${s.general_assessment ? `<p>${esc(s.general_assessment)}</p>` : `<p class="muted-copy">No general assessment provided.</p>`}
+      ${Array.isArray(s.evidence_basis) && s.evidence_basis.length ? `<ul class="evidence">${s.evidence_basis.map((e) => `<li>${esc(e)}</li>`).join("")}</ul>` : ""}
+      <div class="just-list">
+        ${(Array.isArray(s.questions) ? s.questions : []).map((q) => q.justification ? `<div class="just-item"><b>${esc(q.question_id || "?")} · ${esc(q.origin || "")}</b><p>${esc(q.justification)}</p></div>` : "").join("")}
+      </div>
+    </section>` : "";
+  rail.innerHTML = `<div class="rail-inner">
+    <section class="rail-section">
+      <div class="rail-kicker">Review health</div>
+      <div class="rail-title"><h3>${esc((state.data.assessment_meta && state.data.assessment_meta.assessment_label) || "Assessment JSON")}</h3>${statusBadge}</div>
+      <div class="stat-grid">
+        <div class="stat"><b>${stats.studentCount}</b><span>students</span></div>
+        <div class="stat"><b>${stats.totalQuestions}</b><span>questions</span></div>
+        <div class="stat"><b>${stats.overBudgetStudents}</b><span>over budget</span></div>
+        <div class="stat"><b>${stats.fixedQuestionDrift}</b><span>fixed drift</span></div>
+      </div>
+    </section>
+    <section class="rail-section">
+      <div class="rail-kicker">Tier mix</div>
+      ${renderMixRows(stats.tierCounts, stats.studentCount, TIER_NAMES)}
+    </section>
+    <section class="rail-section">
+      <div class="rail-kicker">Origin mix</div>
+      ${renderMixRows(stats.originCounts, stats.totalQuestions, ORIGIN_NAMES)}
+    </section>
+    <section class="rail-section">
+      <div class="rail-kicker">Top issues</div>
+      ${renderIssueList()}
+    </section>
+    ${teacher}
+  </div>`;
+}
+
+/* ---------------- Toast ---------------- */
+let toastTimer = null;
+function toast(msg, kind) {
+  const wrap = $("toastWrap");
+  wrap.innerHTML = `<div class="toast ${kind === "err" ? "err" : ""}">${ic(kind === "err" ? "warn" : "checkc")} ${esc(msg)}</div>`;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { wrap.innerHTML = ""; }, kind === "err" ? 4200 : 2200);
+}
+
+/* ---------------- Wiring ---------------- */
+$("searchIco").outerHTML = ic("search"); // replace placeholder span
+$("loadIco").outerHTML = ic("filedown");
+$("dropIco").outerHTML = ic("filedown");
+$("loadBtn").addEventListener("click", () => $("fileInput").click());
+$("fileInput").addEventListener("change", (e) => loadFromFile(e.target.files[0]));
+$("sampleBtn").addEventListener("click", () => { if (SAMPLE_DATA) loadData(JSON.parse(JSON.stringify(SAMPLE_DATA)), null); else toast("No sample embedded.", "err"); });
+$("searchInput").addEventListener("input", (e) => { state.search = e.target.value; reconcileSelection(); renderAll(); });
+$("themeBtn").addEventListener("click", () => { const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"; applyTheme(next); setStored("ts-theme", next); });
+
+// Keyboard: ↑/↓ or j/k to move between students, / to search
+window.addEventListener("keydown", (e) => {
+  const tag = (e.target.tagName || "").toLowerCase();
+  if (tag === "input" || tag === "textarea") { if (e.key === "Escape") e.target.blur(); return; }
+  if (e.key === "/") { e.preventDefault(); $("searchInput").focus(); return; }
+  if (["ArrowDown", "ArrowUp", "j", "k"].includes(e.key)) {
+    const list = filteredStudents(); if (!list.length) return;
+    e.preventDefault();
+    let idx = list.findIndex((s) => s.student_id === state.selectedId);
+    const dir = (e.key === "ArrowDown" || e.key === "j") ? 1 : -1;
+    idx = idx === -1 ? 0 : Math.min(list.length - 1, Math.max(0, idx + dir));
+    selectStudent(list[idx].student_id);
+  }
+});
+
+// Drag & drop
+let dragDepth = 0;
+window.addEventListener("dragenter", (e) => { e.preventDefault(); dragDepth++; $("dropOverlay").classList.add("show"); });
+window.addEventListener("dragover", (e) => e.preventDefault());
+window.addEventListener("dragleave", (e) => { e.preventDefault(); if (--dragDepth <= 0) { dragDepth = 0; $("dropOverlay").classList.remove("show"); } });
+window.addEventListener("drop", (e) => { e.preventDefault(); dragDepth = 0; $("dropOverlay").classList.remove("show"); const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if (f) loadFromFile(f); });
+
+// Paste raw JSON
+window.addEventListener("paste", (e) => {
+  const text = e.clipboardData && e.clipboardData.getData("text");
+  if (text && text.trim().startsWith("{")) {
+    let parsed;
+    try { parsed = JSON.parse(text); }
+    catch (err) { toast("Couldn't parse JSON: " + err.message, "err"); return; }
+    try { loadData(parsed, "(pasted)"); toast("Loaded pasted JSON", "ok"); }
+    catch (err) { toast("Couldn't review JSON: " + err.message, "err"); }
+  }
+});
+
+/* ---------------- Boot ---------------- */
+const SAMPLE_DATA = {
+  "assessment_meta": {
+    "class_number": 3,
+    "class_title": "Thinking probabilistically about the world (Maxim 6)",
+    "assessment_label": "c3-pre-reading-1",
+    "sequence_position": "First of two pre-class assessments; administered BEFORE the Maxim 6 reading",
+    "time_budget_target_min": 15,
+    "includes_reading": false,
+    "reading": {
+      "title": "Maxim 6 — Thinking probabilistically about the world",
+      "page_count": 30,
+      "minutes_per_page": 3,
+      "estimated_reading_min": 90,
+      "note": "Reading is assigned AFTER this diagnostic and is therefore excluded from this assessment's budget. Carry it in the post-reading assessment, or split it."
+    },
+    "tiers_used": [
+      "Foundational",
+      "Solid",
+      "Advanced"
+    ]
+  },
+  "students": [
+    {
+      "student_id": "lkuziv@hks.harvard.edu",
+      "student_name": "Lucas Kuziv",
+      "tier": "Advanced",
+      "surface_contexts": [
+        "public-sector strategy",
+        "project / portfolio decisions"
+      ],
+      "general_assessment": "Among the strongest probabilistic reasoners in the cohort. On Carter Racing he built a conditional-probability expected-value analysis and, tellingly, flagged the missing data — the temperatures of the races the team actually finished — that would sharpen the estimate. That is exactly the assign-then-update instinct Maxim 6 targets. One caveat for class: his Maxim-5 calibration was weak (7 of 10 true values fell outside his surprise points), so his point estimates are sharp but his intervals are overconfident. Lead with extension, not instruction; probe the gap between a confident number and a calibrated one.",
+      "evidence_basis": [
+        "C2 Carter: conditional-probability EV analysis; explicitly named the missing 'temperatures of finished races' data",
+        "C1 Maxim 5: 7/10 surprises — overconfident intervals",
+        "C1 Essence: reasoned about Khrushchev's motivation and rationality"
+      ],
+      "estimated_total_time_min": 12,
+      "questions": [
+        {
+          "question_id": "q1",
+          "origin": "adaptive",
+          "type": "open_ended",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "When a project review concludes that an initiative has a '30% chance of success,' what does that number actually mean? There is no long run of identical projects to count, so where does the 30% come from — and what would have to be true for it to be a good number rather than a comfortable one?",
+          "context_personalization": "public-sector strategy / project decisions",
+          "difficulty": "advanced",
+          "time_estimate_min": 4,
+          "justification": "Skips the rain framing — he already operates fluently with probabilities (the Carter EV work). The project framing forces the subjective-probability point (no reference class to count), and 'a good number rather than a comfortable one' deliberately targets the overconfidence his Maxim-5 calibration revealed."
+        },
+        {
+          "question_id": "q-gen-1",
+          "origin": "generated",
+          "type": "alternative",
+          "objective": "obj_3 — updating probabilities with new information",
+          "prompt": "You estimate a 30% chance a vendor will deliver on time. You then learn the vendor just missed a deadline on a similar contract. Which response best reflects sound probabilistic thinking?",
+          "context_personalization": "project / vendor decisions",
+          "difficulty": "advanced",
+          "time_estimate_min": 2,
+          "alternatives": [
+            {
+              "id": "a",
+              "text": "Keep it at 30% — a single data point shouldn't move a considered estimate.",
+              "is_correct": false,
+              "rationale": "Ignoring relevant evidence is the opposite of updating; the signal is informative even if not decisive."
+            },
+            {
+              "id": "b",
+              "text": "Revise downward by an amount that reflects how diagnostic the missed deadline is of this vendor's reliability.",
+              "is_correct": true,
+              "rationale": "Correct: updating weighs new evidence by how much it actually distinguishes reliable from unreliable vendors."
+            },
+            {
+              "id": "c",
+              "text": "Drop it to near 0% — they clearly can't deliver.",
+              "is_correct": false,
+              "rationale": "Overreacting to one observation; a single miss rarely justifies near-certainty."
+            },
+            {
+              "id": "d",
+              "text": "The estimate is now unknowable, so abandon the number.",
+              "is_correct": false,
+              "rationale": "Uncertainty doesn't make the estimate useless; it makes updating the right tool."
+            }
+          ],
+          "justification": "He already flagged 'missing data that would update the estimate' on Carter, so this meets him at his own instinct and makes the updating step (Maxim 6, step 3) explicit before he reads it."
+        },
+        {
+          "question_id": "q2a",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone tells you that they think that the next President of their country will likely be a woman. What do you think is the probability that they have in mind? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student. Pure data collection on how students map 'likely' to a number; any adaptation would corrupt the comparison."
+        },
+        {
+          "question_id": "q2b",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone at work tells you that a project your organization is thinking about implementing has a fair chance of success. What do you think is the probability that they have in mind that the project will succeed? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student. Pure data collection on how students map 'fair chance' to a number."
+        },
+        {
+          "question_id": "q3",
+          "origin": "fixed",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty",
+          "prompt": "Imagine you were in the following scenario (based on a true story). You love Ben and Jerry's ice cream and want to bring one pint home for a small dinner that you and your partner/roommate have in about 30 minutes. On your way home from HKS, you stop at the CVS in Harvard Square and see that the price is $7.50. This strikes you as a very high price and you don't recall ever buying this ice cream at such high price. You recall that there is a convenience store near your home (about 10 minutes away). You are sure they sell Ben and Jerry's ice cream but don't know the price. You have to decide whether to buy the ice cream pint at CVS or try for the convenience store. If you decide to go to the convenience store and discover that the price there is greater than $7.50, you cannot go back to CVS as you don't want your guests to arrive before you do. You can assume that the time to stop at the convenience store to buy the ice cream is trivial (less than a minute). What would you do?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 4,
+          "rubric": "Discussion anchor — no correct answer. Surfaces whether the student treats the unknown second price as a distribution and weighs expected cost against the downside of an irreversible choice. Used for in-class discussion.",
+          "justification": "Instructor-locked shared anchor; identical for all students so the class can discuss one common scenario."
+        }
+      ]
+    },
+    {
+      "student_id": "jlong@hks.harvard.edu",
+      "student_name": "Julia Long",
+      "tier": "Advanced",
+      "surface_contexts": [
+        "non-profit / policy",
+        "program & grant decisions"
+      ],
+      "general_assessment": "Advanced and well-calibrated. On Carter she built an explicit decision tree, computed expected values for each branch, and then re-ran it with deliberately conservative probabilities to test whether her conclusion held — she is already fluent in assigning and weighting probabilities. Her Maxim-5 calibration was strong (2 surprises). She needs extension toward the updating step, not instruction on the basics.",
+      "evidence_basis": [
+        "C2 Carter: full decision tree + expected values + conservative-probability sensitivity check",
+        "C1 Maxim 5: 2/10 surprises — well-calibrated"
+      ],
+      "estimated_total_time_min": 13,
+      "questions": [
+        {
+          "question_id": "q1",
+          "origin": "adaptive",
+          "type": "open_ended",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "A funder says a new program has a '30% chance of achieving its target.' Since this exact program has never been run before, is that 30% a statement about the world or about the speaker's state of belief? And what kind of evidence would justify moving it to 40%?",
+          "context_personalization": "non-profit / program decisions",
+          "difficulty": "advanced",
+          "time_estimate_min": 4,
+          "justification": "She's well past the rain example (decision trees on Carter). The framing isolates the subjective-probability idea, and the final clause previews updating (Maxim 6, step 3), which her work suggests she'll take to quickly."
+        },
+        {
+          "question_id": "q-gen-1",
+          "origin": "generated",
+          "type": "open_ended",
+          "objective": "obj_3 — updating probabilities with new information",
+          "prompt": "You start the year believing a grantee has a 70% chance of hitting its milestone. Halfway through, two of three early indicators come in below plan. Describe how you would revise your estimate — and what would make those indicators worth a large revision rather than a small one.",
+          "context_personalization": "non-profit grant management",
+          "difficulty": "advanced",
+          "time_estimate_min": 3,
+          "rubric": "Strong answers tie the size of the revision to how diagnostic the indicators are, not just their direction. No single correct number.",
+          "justification": "Open-ended rather than multiple choice because she demonstrated she can construct her own reasoning chains (the Carter tree); this lets her show the updating logic in her own words rather than merely recognize it."
+        },
+        {
+          "question_id": "q2a",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone tells you that they think that the next President of their country will likely be a woman. What do you think is the probability that they have in mind? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student. Pure data collection on how students map 'likely' to a number."
+        },
+        {
+          "question_id": "q2b",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone at work tells you that a project your organization is thinking about implementing has a fair chance of success. What do you think is the probability that they have in mind that the project will succeed? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student. Pure data collection on how students map 'fair chance' to a number."
+        },
+        {
+          "question_id": "q3",
+          "origin": "fixed",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty",
+          "prompt": "Imagine you were in the following scenario (based on a true story). You love Ben and Jerry's ice cream and want to bring one pint home for a small dinner that you and your partner/roommate have in about 30 minutes. On your way home from HKS, you stop at the CVS in Harvard Square and see that the price is $7.50. This strikes you as a very high price and you don't recall ever buying this ice cream at such high price. You recall that there is a convenience store near your home (about 10 minutes away). You are sure they sell Ben and Jerry's ice cream but don't know the price. You have to decide whether to buy the ice cream pint at CVS or try for the convenience store. If you decide to go to the convenience store and discover that the price there is greater than $7.50, you cannot go back to CVS as you don't want your guests to arrive before you do. You can assume that the time to stop at the convenience store to buy the ice cream is trivial (less than a minute). What would you do?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 4,
+          "rubric": "Discussion anchor — no correct answer. Surfaces whether the student treats the unknown second price as a distribution and weighs expected cost against the downside of an irreversible choice.",
+          "justification": "Instructor-locked shared anchor; identical for all students."
+        }
+      ]
+    },
+    {
+      "student_id": "davidschill@hks.harvard.edu",
+      "student_name": "David Schill",
+      "tier": "Advanced",
+      "surface_contexts": [
+        "aerospace / launch reliability",
+        "public sector"
+      ],
+      "general_assessment": "Conceptually advanced on uncertainty and the best-calibrated student in this set (1 surprise on Maxim 5). On Carter he declined to race and spontaneously drew the Challenger O-ring parallel, warning specifically about extrapolating a relationship beyond the temperature range where it was observed — a sophisticated point about the limits of data support. He is a space-launch professional; lean into that context, where the subjective-vs-frequency distinction has real stakes.",
+      "evidence_basis": [
+        "C2 Carter: declined to race; invoked the Challenger O-ring analogy and the risk of extrapolating beyond observed data",
+        "C1 Maxim 5: 1/10 surprises — best calibration in this set",
+        "roster: space launch professional, public sector"
+      ],
+      "estimated_total_time_min": 12,
+      "questions": [
+        {
+          "question_id": "q1",
+          "origin": "adaptive",
+          "type": "open_ended",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "A launch readiness review puts the probability of a successful flight at 97%. There is no long series of identical vehicles flown in identical conditions to average over. What is the 97% really claiming — and how is it different from saying '97 of the last 100 launches succeeded'?",
+          "context_personalization": "aerospace / launch reliability",
+          "difficulty": "advanced",
+          "time_estimate_min": 4,
+          "justification": "He already reasons about data support and reference classes (the Challenger extrapolation point on Carter). This pushes directly on the subjective-vs-frequency distinction inside his own professional domain."
+        },
+        {
+          "question_id": "q-gen-1",
+          "origin": "generated",
+          "type": "alternative",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "Which of these is the cleanest example of a *subjective* probability rather than a counted frequency?",
+          "context_personalization": "aerospace / engineering",
+          "difficulty": "advanced",
+          "time_estimate_min": 2,
+          "alternatives": [
+            {
+              "id": "a",
+              "text": "The chance a fair die shows a six is 1/6.",
+              "is_correct": false,
+              "rationale": "This rests on symmetry / a classical model, not a personal degree of belief about a unique event."
+            },
+            {
+              "id": "b",
+              "text": "Based on what we know today, there's a 60% chance this novel rocket design flies successfully on its first attempt.",
+              "is_correct": true,
+              "rationale": "Correct: a single, unique, never-repeated event — the number can only be a degree of belief."
+            },
+            {
+              "id": "c",
+              "text": "Historically, 3% of these components fail per 1,000 hours.",
+              "is_correct": false,
+              "rationale": "A counted frequency over many components."
+            },
+            {
+              "id": "d",
+              "text": "Two of every hundred flights in this fleet aborted.",
+              "is_correct": false,
+              "rationale": "Also a frequency drawn from a repeated record."
+            }
+          ],
+          "justification": "He distinguishes data-supported from extrapolated claims instinctively; this asks him to name the boundary explicitly before the reading does it for him."
+        },
+        {
+          "question_id": "q2a",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone tells you that they think that the next President of their country will likely be a woman. What do you think is the probability that they have in mind? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q2b",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone at work tells you that a project your organization is thinking about implementing has a fair chance of success. What do you think is the probability that they have in mind that the project will succeed? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q3",
+          "origin": "fixed",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty",
+          "prompt": "Imagine you were in the following scenario (based on a true story). You love Ben and Jerry's ice cream and want to bring one pint home for a small dinner that you and your partner/roommate have in about 30 minutes. On your way home from HKS, you stop at the CVS in Harvard Square and see that the price is $7.50. This strikes you as a very high price and you don't recall ever buying this ice cream at such high price. You recall that there is a convenience store near your home (about 10 minutes away). You are sure they sell Ben and Jerry's ice cream but don't know the price. You have to decide whether to buy the ice cream pint at CVS or try for the convenience store. If you decide to go to the convenience store and discover that the price there is greater than $7.50, you cannot go back to CVS as you don't want your guests to arrive before you do. You can assume that the time to stop at the convenience store to buy the ice cream is trivial (less than a minute). What would you do?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 4,
+          "rubric": "Discussion anchor — no correct answer. Surfaces whether the student treats the unknown second price as a distribution and weighs expected cost against an irreversible choice.",
+          "justification": "Instructor-locked shared anchor; identical for all students."
+        }
+      ]
+    },
+    {
+      "student_id": "dfadhel@hks.harvard.edu",
+      "student_name": "Dhuha Fadhel",
+      "tier": "Solid",
+      "surface_contexts": [
+        "international organizations / development",
+        "public policy"
+      ],
+      "general_assessment": "Worth a teacher's eye. She reports an unusually strong quantitative background (Expert Excel, 7+ statistics/econometrics and 7+ economics courses), yet on Carter she gave a one-line, non-analytical answer ('I've never been into racing... one of the easiest ways to get killed') rather than engaging the numbers. Tiered on demonstrated behavior (Solid), not credentials. Q1 is set to confirm whether she can articulate probability as a degree of belief; if she does so cleanly, she is effectively Advanced and the gap was disengagement, not understanding.",
+      "evidence_basis": [
+        "C2 Carter: minimal, risk-averse answer despite Expert Excel + 7+ stats/econ on the roster",
+        "C1 Essence: chose Diplomatic Pressures; uncertain about options that could trigger nuclear war",
+        "C1 Maxim 5: 4/10 surprises"
+      ],
+      "estimated_total_time_min": 10,
+      "questions": [
+        {
+          "question_id": "q1",
+          "origin": "adaptive",
+          "type": "open_ended",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "A weather forecast says there's a 30% chance of rain tomorrow. First, explain in a sentence or two what that 30% means. Then give one example from your own work where a number like that — 'a 30% chance' — would actually change what you decide to do.",
+          "context_personalization": "international organizations / development",
+          "difficulty": "solid",
+          "time_estimate_min": 3,
+          "justification": "Set at Solid to resolve the ambiguity her Carter answer left: the first half checks the definition, the second asks her to connect it to a real decision in her domain. If she answers both crisply, re-tier to Advanced — her background suggests she can."
+        },
+        {
+          "question_id": "q-gen-1",
+          "origin": "generated",
+          "type": "alternative",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "Which interpretation of 'a 30% chance of rain tomorrow' is most defensible?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "alternatives": [
+            {
+              "id": "a",
+              "text": "It will rain over 30% of the area.",
+              "is_correct": false,
+              "rationale": "A common misconception; the percentage is not a fraction of geography."
+            },
+            {
+              "id": "b",
+              "text": "It will rain for 30% of the day.",
+              "is_correct": false,
+              "rationale": "Also a misconception; it is not a fraction of time."
+            },
+            {
+              "id": "c",
+              "text": "Given today's information, the forecaster's degree of belief that measurable rain occurs is 30%.",
+              "is_correct": true,
+              "rationale": "Correct: the figure expresses a calibrated degree of belief about a single day."
+            },
+            {
+              "id": "d",
+              "text": "Out of every 10 forecasters, 3 expect rain.",
+              "is_correct": false,
+              "rationale": "It is one forecaster's probability, not a vote count."
+            }
+          ],
+          "justification": "A quick, low-stakes check of the exact misconception the Maxim targets; lets the teacher see whether the thin Carter answer reflects a real gap or just disengagement."
+        },
+        {
+          "question_id": "q2a",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone tells you that they think that the next President of their country will likely be a woman. What do you think is the probability that they have in mind? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q2b",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone at work tells you that a project your organization is thinking about implementing has a fair chance of success. What do you think is the probability that they have in mind that the project will succeed? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q3",
+          "origin": "fixed",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty",
+          "prompt": "Imagine you were in the following scenario (based on a true story). You love Ben and Jerry's ice cream and want to bring one pint home for a small dinner that you and your partner/roommate have in about 30 minutes. On your way home from HKS, you stop at the CVS in Harvard Square and see that the price is $7.50. This strikes you as a very high price and you don't recall ever buying this ice cream at such high price. You recall that there is a convenience store near your home (about 10 minutes away). You are sure they sell Ben and Jerry's ice cream but don't know the price. You have to decide whether to buy the ice cream pint at CVS or try for the convenience store. If you decide to go to the convenience store and discover that the price there is greater than $7.50, you cannot go back to CVS as you don't want your guests to arrive before you do. You can assume that the time to stop at the convenience store to buy the ice cream is trivial (less than a minute). What would you do?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 4,
+          "rubric": "Discussion anchor — no correct answer.",
+          "justification": "Instructor-locked shared anchor; identical for all students."
+        }
+      ]
+    },
+    {
+      "student_id": "swong@hks.harvard.edu",
+      "student_name": "Stanley Wong",
+      "tier": "Solid",
+      "surface_contexts": [
+        "non-profit",
+        "health / clinical decisions"
+      ],
+      "general_assessment": "Engages with probability — he leaned on the team's finish rate to argue for racing — but he explicitly set the stakes aside, writing that he 'didn't factor much' the sponsorship money because those 'seemed the usual expected results.' That is the precise gap Maxim 6's decision material addresses: weighing likelihood without weighting consequences. No formal statistics background (0 courses), but his Maxim-5 story — certain a relative's diagnosis was terminal, and it wasn't — shows genuine intuition that confident beliefs fail. Target probability-times-consequence.",
+      "evidence_basis": [
+        "C2 Carter: used the finish rate but explicitly discounted the financial consequences",
+        "C1 Maxim 5: 2/10 surprises; story about misplaced certainty over a health prognosis",
+        "roster: 0 statistics courses"
+      ],
+      "estimated_total_time_min": 12,
+      "questions": [
+        {
+          "question_id": "q1",
+          "origin": "adaptive",
+          "type": "open_ended",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "A forecast gives a 30% chance of rain. Explain what that means — and then say how your decision to carry an umbrella should depend not only on that 30%, but on what happens to you if you get caught without one.",
+          "context_personalization": "everyday decision framing",
+          "difficulty": "solid",
+          "time_estimate_min": 3,
+          "justification": "Keeps the accessible rain framing (no stats background) but deliberately bolts on the consequence dimension he dropped on Carter, so the teacher can see whether he now weights probability by magnitude."
+        },
+        {
+          "question_id": "q-gen-1",
+          "origin": "generated",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty (probability × consequence)",
+          "prompt": "Two choices: (A) a 90% chance of saving $100 and a 10% chance of losing $20; (B) a 60% chance of saving $5,000 and a 40% chance of losing $4,000. Which would you pick — and walk through how both the probabilities AND the amounts at stake drive your answer.",
+          "context_personalization": "neutral money framing (no statistics required)",
+          "difficulty": "solid",
+          "time_estimate_min": 3,
+          "rubric": "Looks for the student combining likelihood with magnitude (an informal expected-value comparison) rather than choosing on probability alone. No single correct choice; the reasoning is the point.",
+          "justification": "Built specifically to draw out the probability-times-consequence move he skipped on Carter, in a frame that doesn't require statistics training."
+        },
+        {
+          "question_id": "q2a",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone tells you that they think that the next President of their country will likely be a woman. What do you think is the probability that they have in mind? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q2b",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone at work tells you that a project your organization is thinking about implementing has a fair chance of success. What do you think is the probability that they have in mind that the project will succeed? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q3",
+          "origin": "fixed",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty",
+          "prompt": "Imagine you were in the following scenario (based on a true story). You love Ben and Jerry's ice cream and want to bring one pint home for a small dinner that you and your partner/roommate have in about 30 minutes. On your way home from HKS, you stop at the CVS in Harvard Square and see that the price is $7.50. This strikes you as a very high price and you don't recall ever buying this ice cream at such high price. You recall that there is a convenience store near your home (about 10 minutes away). You are sure they sell Ben and Jerry's ice cream but don't know the price. You have to decide whether to buy the ice cream pint at CVS or try for the convenience store. If you decide to go to the convenience store and discover that the price there is greater than $7.50, you cannot go back to CVS as you don't want your guests to arrive before you do. You can assume that the time to stop at the convenience store to buy the ice cream is trivial (less than a minute). What would you do?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 4,
+          "rubric": "Discussion anchor — no correct answer.",
+          "justification": "Instructor-locked shared anchor; identical for all students."
+        }
+      ]
+    },
+    {
+      "student_id": "anitaroy@hks.harvard.edu",
+      "student_name": "Anita Roy",
+      "tier": "Foundational",
+      "surface_contexts": [
+        "policing / public safety"
+      ],
+      "general_assessment": "Engages intuitively and optimistically. On Carter she read the 29% failure and 50% win figures at face value to argue for racing, without weighing the cost of the downside or the risk of racing at a temperature outside the data ('40 degrees, good for a start'). Novice quantitative background (one statistics and one economics course). Her work as a police officer managing riots and crowd situations gives her real, lived experience of deciding under uncertainty — a strong hook. Foundational: lead with the concrete rain example and a little scaffolding before bridging to her own domain.",
+      "evidence_basis": [
+        "C2 Carter: face-value reading of the percentages; optimistic; no downside weighting",
+        "C1 Maxim 5: 3/10 surprises; story about policing riots under uncertainty",
+        "roster: novice Excel, 1 statistics / 1 economics course"
+      ],
+      "estimated_total_time_min": 12,
+      "questions": [
+        {
+          "question_id": "q1",
+          "origin": "adaptive",
+          "type": "open_ended",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "A weather forecast says there's a 30% chance of rain tomorrow. In your own words, what does that 30% mean? (No trick here — just explain it as you understand it.) Then: in your police work, when you have to act on a situation that 'might or might not' escalate, are you doing something similar? Briefly say how.",
+          "context_personalization": "policing / public safety",
+          "difficulty": "foundational",
+          "time_estimate_min": 4,
+          "justification": "Foundational framing: the rain example is concrete and the 'no trick' note lowers the stakes, since her Carter answer suggests she takes figures at face value. The policing bridge connects the concept to decisions she already makes under uncertainty."
+        },
+        {
+          "question_id": "q-gen-1",
+          "origin": "generated",
+          "type": "alternative",
+          "objective": "obj_1 — subjective probability as a degree of belief",
+          "prompt": "Which of these comes closest to what 'a 30% chance of rain tomorrow' means?",
+          "context_personalization": null,
+          "difficulty": "foundational",
+          "time_estimate_min": 2,
+          "alternatives": [
+            {
+              "id": "a",
+              "text": "It is certain to rain, but only a little.",
+              "is_correct": false,
+              "rationale": "30% is not certainty; it expresses doubt, not a small amount of rain."
+            },
+            {
+              "id": "b",
+              "text": "Rain is fairly unlikely, but real enough to plan for — closer to 'probably not' than 'definitely not.'",
+              "is_correct": true,
+              "rationale": "Correct at a foundational level: it captures the figure as a graded degree of belief between impossible and certain."
+            },
+            {
+              "id": "c",
+              "text": "No one can say anything useful about rain tomorrow.",
+              "is_correct": false,
+              "rationale": "Uncertainty is not the same as having no information; 30% is a usable estimate."
+            },
+            {
+              "id": "d",
+              "text": "It rained on 30 days last year.",
+              "is_correct": false,
+              "rationale": "A past count, not a forecast about tomorrow."
+            }
+          ],
+          "justification": "A gentle, recognition-level check (not generation) appropriate to a foundational start; gives the teacher a clean read on whether the basic concept is in place before the reading."
+        },
+        {
+          "question_id": "q2a",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone tells you that they think that the next President of their country will likely be a woman. What do you think is the probability that they have in mind? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q2b",
+          "origin": "fixed",
+          "type": "numeric",
+          "objective": "obj_2 — translating vague verbal likelihoods into numbers",
+          "prompt": "Suppose someone at work tells you that a project your organization is thinking about implementing has a fair chance of success. What do you think is the probability that they have in mind that the project will succeed? Write a number from 0 to 100, where 0 means no chance and 100 means 100% chance. Please write the number only (no percent signs).",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 1,
+          "numeric_answer": {
+            "expected": null,
+            "acceptable_range": [],
+            "is_data_collection_only": true
+          },
+          "justification": "Instructor-locked, identical for every student."
+        },
+        {
+          "question_id": "q3",
+          "origin": "fixed",
+          "type": "open_ended",
+          "objective": "obj_3 — reasoning and deciding under uncertainty",
+          "prompt": "Imagine you were in the following scenario (based on a true story). You love Ben and Jerry's ice cream and want to bring one pint home for a small dinner that you and your partner/roommate have in about 30 minutes. On your way home from HKS, you stop at the CVS in Harvard Square and see that the price is $7.50. This strikes you as a very high price and you don't recall ever buying this ice cream at such high price. You recall that there is a convenience store near your home (about 10 minutes away). You are sure they sell Ben and Jerry's ice cream but don't know the price. You have to decide whether to buy the ice cream pint at CVS or try for the convenience store. If you decide to go to the convenience store and discover that the price there is greater than $7.50, you cannot go back to CVS as you don't want your guests to arrive before you do. You can assume that the time to stop at the convenience store to buy the ice cream is trivial (less than a minute). What would you do?",
+          "context_personalization": null,
+          "difficulty": "solid",
+          "time_estimate_min": 4,
+          "rubric": "Discussion anchor — no correct answer.",
+          "justification": "Instructor-locked shared anchor; identical for all students."
+        }
+      ]
+    }
+  ]
+};
+initTheme();
+if (SAMPLE_DATA) loadData(JSON.parse(JSON.stringify(SAMPLE_DATA)), null);
+else { renderDetail(); renderRail(); }
+</script>
+</body>
+</html>

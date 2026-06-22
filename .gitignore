@@ -1,0 +1,35 @@
+# Local OS/editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local environment and agent config
+.env
+.env.*
+!.env.example
+.claude/
+.codex/
+.agents/
+
+# Project source/context that should not be published with the Pages app
+audios/
+docs/
+plans/
+tools/
+
+# Dependency, build, and test artifacts
+node_modules/
+dist/
+build/
+coverage/
+.cache/
+.parcel-cache/
+.vite/
+.next/
+out/
+
+# Logs and temporary outputs
+*.log
+*.tmp
+*.temp
