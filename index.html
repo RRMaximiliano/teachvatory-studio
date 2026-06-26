@@ -237,6 +237,19 @@
 
   .review-note { background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--warn-border); border-radius: var(--r-md); padding: 11px 13px; margin: 0 0 18px; color: var(--ink-2); font-size: 13px; }
   .review-note.err { border-left-color: var(--danger-border); background: var(--danger-bg); color: var(--danger-tx); }
+  .brief-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow-sm); padding: 22px; }
+  .brief-panel h2 { margin: 0 0 7px; font-size: 26px; letter-spacing: -.025em; line-height: 1.15; }
+  .brief-lede { margin: 0; max-width: 68ch; color: var(--ink-2); line-height: 1.55; }
+  .brief-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+  .brief-card { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-sunken); padding: 12px; min-width: 0; }
+  .brief-card b { display: block; font-size: 20px; color: var(--ink); font-weight: 660; margin-bottom: 2px; }
+  .brief-card span { color: var(--muted); font-size: 12px; line-height: 1.35; }
+  .brief-section { margin-top: 22px; }
+  .brief-section h3 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--faint); }
+  .brief-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .brief-list li { border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface-sunken); padding: 10px 12px; color: var(--ink-2); font-size: 13px; line-height: 1.45; }
+  .brief-list strong { color: var(--ink); font-weight: 650; }
+  @media (max-width: 760px) { .brief-grid { grid-template-columns: 1fr; } .brief-panel { padding: 17px; } }
 
   /* badges */
   .badge { font-size: 11px; font-weight: 640; padding: 3px 9px; border-radius: var(--r-sm); white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; letter-spacing: .005em; }
@@ -453,6 +466,7 @@ const TIER_NAMES = ["Foundational", "Solid", "Advanced"];
 const ORIGIN_NAMES = ["fixed", "adaptive", "generated"];
 const TYPE_NAMES = ["alternative", "open_ended", "numeric"];
 const DIFFICULTY_NAMES = ["foundational", "solid", "advanced"];
+const DOC_KIND = { assessment: "assessment", classBrief: "class-brief", unknown: "unknown" };
 const EMPTY_REVIEW = {
   issues: [],
   stats: {
@@ -469,11 +483,30 @@ const EMPTY_REVIEW = {
 function cloneReviewTemplate() {
   return typeof structuredClone === "function" ? structuredClone(EMPTY_REVIEW) : JSON.parse(JSON.stringify(EMPTY_REVIEW));
 }
-const state = { data: null, filename: null, selectedId: null, search: "", tierFilter: "All", review: cloneReviewTemplate() };
+const state = { data: null, filename: null, selectedId: null, search: "", tierFilter: "All", review: cloneReviewTemplate(), documentKind: DOC_KIND.unknown };
 const $ = (id) => document.getElementById(id);
 
 function esc(s) {
   return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function detectDocumentKind(data) {
+  if (!isPlainObject(data)) return DOC_KIND.unknown;
+  if (isPlainObject(data.assessment_meta) || Array.isArray(data.students)) return DOC_KIND.assessment;
+  if (isPlainObject(data.identification) && isPlainObject(data.question_plan)) return DOC_KIND.classBrief;
+  return DOC_KIND.unknown;
+}
+function briefQuestionCounts(data) {
+  const plan = isPlainObject(data && data.question_plan) ? data.question_plan : {};
+  const adaptive = isPlainObject(plan.adaptive_questions) && Array.isArray(plan.adaptive_questions.items) ? plan.adaptive_questions.items.length : 0;
+  return {
+    fixed: Array.isArray(plan.fixed_questions) ? plan.fixed_questions.length : 0,
+    adaptive,
+    generated: isPlainObject(plan.generated_questions) ? 1 : 0
+  };
+}
+function objectiveCount(data) {
+  const obj = isPlainObject(data && data.learning_objectives) ? data.learning_objectives : {};
+  return Object.keys(obj).length;
 }
 
 /* ---------------- Theme ---------------- */
@@ -521,6 +554,12 @@ function reviewAssessment(data) {
 
   if (!isPlainObject(data)) {
     addIssue("error", "invalid-root", "$", "Root must be a JSON object.");
+    return review;
+  }
+  if (detectDocumentKind(data) === DOC_KIND.classBrief) {
+    const counts = briefQuestionCounts(data);
+    stats.totalQuestions = counts.fixed + counts.adaptive;
+    addIssue("error", "wrong-document-type", "$", "This file is a Class Brief / generation input. The review console needs generated assessment output with assessment_meta and students.");
     return review;
   }
 
@@ -647,11 +686,13 @@ function loadData(obj, filename) {
   state.data = obj;
   state.filename = filename || null;
   state.review = review;
+  state.documentKind = detectDocumentKind(obj);
   state.search = ""; state.tierFilter = "All";
   $("searchInput").value = "";
   state.selectedId = null;
   reconcileSelection();
   renderAll();
+  return state.documentKind;
 }
 function loadFromFile(file) {
   if (!file) return;
@@ -660,7 +701,11 @@ function loadFromFile(file) {
     let parsed;
     try { parsed = JSON.parse(e.target.result); }
     catch (err) { toast("Couldn't parse JSON: " + err.message, "err"); return; }
-    try { loadData(parsed, file.name); toast("Loaded " + file.name, "ok"); }
+    try {
+      const kind = loadData(parsed, file.name);
+      if (kind === DOC_KIND.classBrief) toast("Loaded a Class Brief, not generated assessment output.", "err");
+      else toast("Loaded " + file.name, "ok");
+    }
     catch (err) { toast("Couldn't review JSON: " + err.message, "err"); }
   };
   reader.readAsText(file);
@@ -668,15 +713,17 @@ function loadFromFile(file) {
 
 /* ---------------- Top bar ---------------- */
 function renderTopbar() {
-  const meta = (state.data && state.data.assessment_meta) || {};
+  const meta = (state.data && (state.data.assessment_meta || state.data.identification)) || {};
+  const budget = (state.data && (state.data.time_budget || state.data.assessment_meta)) || {};
   const strip = $("metaStrip");
   if (!state.data) { strip.innerHTML = ""; $("statusPill").innerHTML = ""; return; }
 
   const n = Array.isArray(state.data.students) ? state.data.students.length : 0;
   const facts = [];
   if (meta.class_number != null) facts.push(`<span class="fact"><b>Class ${esc(meta.class_number)}</b></span>`);
-  facts.push(`<span class="fact">${ic("list")} ${n} student${n === 1 ? "" : "s"}</span>`);
-  if (meta.time_budget_target_min != null) facts.push(`<span class="fact">${ic("clock")} <b>${esc(meta.time_budget_target_min)}</b> min budget</span>`);
+  if (state.documentKind === DOC_KIND.classBrief) facts.push(`<span class="fact">${ic("folder")} Class Brief</span>`);
+  else facts.push(`<span class="fact">${ic("list")} ${n} student${n === 1 ? "" : "s"}</span>`);
+  if (budget.time_budget_target_min != null || budget.target_total_minutes != null) facts.push(`<span class="fact">${ic("clock")} <b>${esc(budget.time_budget_target_min ?? budget.target_total_minutes)}</b> min budget</span>`);
 
   strip.innerHTML =
     `<span class="ct">${esc(meta.class_title || "Untitled assessment")}</span>` +
@@ -699,7 +746,7 @@ function tierCounts() {
 }
 const TIER_DOT = { Foundational: "--tier-found-dt", Solid: "--tier-solid-dt", Advanced: "--tier-adv-dt" };
 function renderTierFilters() {
-  if (!state.data) { $("tierFilters").innerHTML = ""; return; }
+  if (!state.data || !Array.isArray(state.data.students)) { $("tierFilters").innerHTML = ""; return; }
   const counts = tierCounts();
   $("tierFilters").innerHTML = ["All", "Foundational", "Solid", "Advanced"].map((t) => {
     const dot = TIER_DOT[t] ? `<span class="dot" style="background:var(${TIER_DOT[t]})"></span>` : "";
@@ -715,6 +762,7 @@ function renderTierFilters() {
 
 /* ---------------- Sidebar ---------------- */
 function filteredStudents() {
+  if (!state.data || !Array.isArray(state.data.students)) return [];
   let list = (state.data && state.data.students) || [];
   if (state.tierFilter !== "All") list = list.filter((s) => s.tier === state.tierFilter);
   const q = state.search.trim().toLowerCase();
@@ -735,6 +783,11 @@ function renderAll() {
 function renderSidebar() {
   const list = $("studentList"); const head = $("listHead");
   if (!state.data) { list.innerHTML = ""; head.innerHTML = ""; return; }
+  if (!Array.isArray(state.data.students)) {
+    head.textContent = "0 of 0";
+    list.innerHTML = `<div class="empty-list">This JSON has no student assessments.</div>`;
+    return;
+  }
   const students = filteredStudents();
   head.textContent = `${students.length} of ${state.data.students.length}`;
   if (!students.length) { list.innerHTML = `<div class="empty-list">No students match your filter.</div>`; return; }
@@ -776,6 +829,41 @@ function renderMobileSwitcher() {
 function bindMobileSwitcher() {
   const sel = $("mobileStudentSelect");
   if (sel) sel.addEventListener("change", (e) => selectStudent(e.target.value));
+}
+function renderBriefDetail() {
+  const data = state.data || {};
+  const id = isPlainObject(data.identification) ? data.identification : {};
+  const budget = isPlainObject(data.time_budget) ? data.time_budget : {};
+  const reading = isPlainObject(data.reading) ? data.reading : {};
+  const plan = isPlainObject(data.question_plan) ? data.question_plan : {};
+  const counts = briefQuestionCounts(data);
+  const fixed = Array.isArray(plan.fixed_questions) ? plan.fixed_questions : [];
+  const adaptive = isPlainObject(plan.adaptive_questions) && Array.isArray(plan.adaptive_questions.items) ? plan.adaptive_questions.items : [];
+  const generated = isPlainObject(plan.generated_questions) ? plan.generated_questions : null;
+  const objectives = isPlainObject(data.learning_objectives) ? Object.entries(data.learning_objectives) : [];
+  const fixedPreview = fixed.slice(0, 5).map((q) => `<li><strong>${esc(q.id || "?")} · ${esc(q.type || "")}</strong><br>${esc(q.text || q.purpose || "")}</li>`).join("");
+  const adaptivePreview = adaptive.slice(0, 4).map((q) => `<li><strong>${esc(q.id || "?")} · ${esc(q.objective || "")}</strong><br>${esc(q.seed_text || "")}</li>`).join("");
+  const objectivePreview = objectives.slice(0, 5).map(([key, value]) => `<li><strong>${esc(key)}</strong><br>${esc(value)}</li>`).join("");
+  $("detail").innerHTML = `<div class="detail-inner">
+    <div class="review-note err">${ic("warn")} This is a Class Brief / generation input, not generated assessment output. Run the Personalization Engine with Student Data and the schema, then load the resulting JSON with <b>assessment_meta</b> and <b>students</b>.</div>
+    <section class="brief-panel">
+      <h2>${esc(id.class_title || "Class Brief loaded")}</h2>
+      <p class="brief-lede">The file is useful, but it belongs one step earlier in the workflow. It defines the assessment plan for generation; it does not yet contain personalized student quizzes for the review console.</p>
+      <div class="brief-grid">
+        <div class="brief-card"><b>${esc(id.class_number || "-")}</b><span>class number</span></div>
+        <div class="brief-card"><b>${esc(budget.target_total_minutes || "-")}</b><span>target minutes${budget.includes_reading === false ? " · reading excluded" : ""}</span></div>
+        <div class="brief-card"><b>${esc(counts.fixed)}</b><span>fixed questions</span></div>
+        <div class="brief-card"><b>${esc(counts.adaptive)}</b><span>adaptive seeds</span></div>
+        <div class="brief-card"><b>${esc(objectiveCount(data))}</b><span>learning objectives</span></div>
+        <div class="brief-card"><b>${esc(reading.page_count || "-")}</b><span>reading pages</span></div>
+      </div>
+      ${plan.sequence_guidance ? `<div class="brief-section"><h3>Sequence guidance</h3><p class="brief-lede">${esc(plan.sequence_guidance)}</p></div>` : ""}
+      ${objectivePreview ? `<div class="brief-section"><h3>Learning objectives</h3><ul class="brief-list">${objectivePreview}</ul></div>` : ""}
+      ${fixedPreview ? `<div class="brief-section"><h3>Fixed question preview</h3><ul class="brief-list">${fixedPreview}${fixed.length > 5 ? `<li><strong>+${fixed.length - 5} more fixed questions</strong></li>` : ""}</ul></div>` : ""}
+      ${adaptivePreview ? `<div class="brief-section"><h3>Adaptive seed preview</h3><ul class="brief-list">${adaptivePreview}</ul></div>` : ""}
+      ${generated ? `<div class="brief-section"><h3>Generated-question guidance</h3><p class="brief-lede">${esc(generated.how_many || "Configured in the brief.")}</p></div>` : ""}
+    </section>
+  </div>`;
 }
 function renderQuestion(q, i) {
   const origin = esc(q.origin || ""); const type = esc(q.type || ""); const diff = (q.difficulty || "").toLowerCase();
@@ -829,6 +917,7 @@ function renderDetail() {
     </div></div>`;
     return;
   }
+  if (state.documentKind === DOC_KIND.classBrief) { renderBriefDetail(); return; }
   const s = selectedStudent();
   const counts = issueCounts(state.review);
   const reviewNote = counts.total
@@ -886,6 +975,35 @@ function renderRail() {
   if (!rail) return;
   if (!state.data) {
     rail.innerHTML = `<div class="rail-inner"><section class="rail-section"><div class="rail-kicker">Review health</div><p class="muted-copy">Load a generated assessment JSON to inspect file health.</p></section></div>`;
+    return;
+  }
+  if (state.documentKind === DOC_KIND.classBrief) {
+    const id = isPlainObject(state.data.identification) ? state.data.identification : {};
+    const counts = briefQuestionCounts(state.data);
+    rail.innerHTML = `<div class="rail-inner">
+      <section class="rail-section">
+        <div class="rail-kicker">Document type</div>
+        <div class="rail-title"><h3>Class Brief</h3><span class="pill err">${ic("warn")} not reviewable</span></div>
+        <p class="muted-copy">This is the input for generation. It has no personalized student assessments yet.</p>
+      </section>
+      <section class="rail-section">
+        <div class="rail-kicker">Brief summary</div>
+        <div class="stat-grid">
+          <div class="stat"><b>${esc(id.class_number || "-")}</b><span>class</span></div>
+          <div class="stat"><b>${esc(counts.fixed)}</b><span>fixed</span></div>
+          <div class="stat"><b>${esc(counts.adaptive)}</b><span>adaptive</span></div>
+          <div class="stat"><b>${esc(objectiveCount(state.data))}</b><span>objectives</span></div>
+        </div>
+      </section>
+      <section class="rail-section">
+        <div class="rail-kicker">Next step</div>
+        <p class="muted-copy">Use this Class Brief with the system prompt, quiz schema, and Student Data to generate output JSON. Then load that generated file here.</p>
+      </section>
+      <section class="rail-section">
+        <div class="rail-kicker">Top issues</div>
+        ${renderIssueList()}
+      </section>
+    </div>`;
     return;
   }
   const s = selectedStudent();
@@ -981,7 +1099,11 @@ window.addEventListener("paste", (e) => {
     let parsed;
     try { parsed = JSON.parse(text); }
     catch (err) { toast("Couldn't parse JSON: " + err.message, "err"); return; }
-    try { loadData(parsed, "(pasted)"); toast("Loaded pasted JSON", "ok"); }
+    try {
+      const kind = loadData(parsed, "(pasted)");
+      if (kind === DOC_KIND.classBrief) toast("Pasted JSON is a Class Brief, not generated assessment output.", "err");
+      else toast("Loaded pasted JSON", "ok");
+    }
     catch (err) { toast("Couldn't review JSON: " + err.message, "err"); }
   }
 });
